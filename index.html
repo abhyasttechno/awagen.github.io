@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Post Creator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+        integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            margin-top: 20px;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 25px;
+            height: 25px;
+            background-color: #6c757d;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 25px;
+            margin-right: 10px;
+        }
+
+        .post-type-button {
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            padding: 5px 10px;
+            margin-right: 5px;
+            cursor: pointer;
+            background-color: white;
+            color: #495057;
+        }
+
+        .post-type-button:hover {
+            background-color: #e9ecef;
+        }
+
+        .post-type-button.active {
+            background-color: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+        .platform-select {
+            max-width: 150px; /* Adjust as needed */
+        }
+
+        /* Style for the content blocks in the modal */
+        .generated-content-block {
+            margin-bottom: 15px;
+            padding: 15px; /* Increased padding slightly */
+            border: 1px solid #e0e0e0; /* Lighter border */
+            border-radius: 8px; /* More rounded corners */
+            background-color: #ffffff; /* White background */
+            box-shadow: 0 2px 4px rgba(0,0,0,.05); /* Subtle shadow */
+            word-wrap: break-word; /* Break long words */
+        }
+
+         .generated-content-block h6 {
+            margin-top: 0; /* Remove top margin */
+            margin-bottom: 10px; /* Space below heading */
+            color: #0056b3; /* Bootstrap primary color variation */
+            border-bottom: 1px solid #eee; /* Separator line */
+            padding-bottom: 5px;
+         }
+
+         .generated-content-block .fab {
+            margin-right: 8px; /* Increased space for icon */
+         }
+
+         /* Container for multiple images */
+         .post-images-preview {
+             display: flex; /* Use flexbox for layout */
+             flex-wrap: wrap; /* Allow images to wrap to the next line */
+             gap: 10px; /* Space between images */
+             margin-bottom: 15px; /* Space below the image block */
+             padding-bottom: 15px; /* Add padding if border/shadow needed around container */
+             border-bottom: 1px solid #eee; /* Separator below images */
+         }
+
+         /* Style for individual images inside the modal blocks */
+         .post-images-preview img.post-image-preview {
+             max-width: 100%; /* Ensure image fits within its container width */
+             width: auto; /* Allow width to adjust */
+             height: auto; /* Maintain aspect ratio */
+             display: block; /* Make it a block element */
+             border: 2px solid #007bff; /* Good looking border */
+             border-radius: 5px; /* Soft corners for the image */
+             padding: 3px; /* Padding between border and image */
+             box-sizing: border-box; /* Include padding and border in the element's total width and height */
+             /* Adjust max-width further if you want them side-by-side on large screens */
+              max-width: calc(50% - 5px); /* Example: two images per row on wider screens */
+         }
+
+          /* Style for text paragraphs */
+          .generated-content-block p {
+              white-space: pre-wrap; /* Preserve line breaks from AI response */
+              margin-bottom: 0; /* No margin at the end of the last paragraph */
+          }
+
+         #loadingSpinner {
+            display: none; /* Hidden by default */
+            margin-left: 15px;
+         }
+
+         /* Style for share buttons */
+         .share-buttons {
+            margin-top: 15px;
+            text-align: right; /* Align buttons to the right if desired */
+         }
+
+         .share-button {
+            margin-left: 5px;
+         }
+
+         /* Style for hashtags */
+         .hashtag {
+            font-weight: bold;           /* Make hashtags bold */
+            color: darkblue;          /* Dark bluish color */
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>What do you want to create today? <i class="fa-solid fa-wand-magic-sparkles"></i></h1>
+        <hr>
+
+        <!-- Step 1: Pick your choice of post -->
+        <div>
+            <h5 style="margin-bottom: 15px;"><span class="step-number">1</span> Pick your choice of post</h5>
+            <!-- Added data-type attribute for easier identification -->
+            <button class="post-type-button active" data-type="Idea"> <i class="fa-solid fa-lightbulb"></i> Idea</button>
+            <button class="post-type-button" data-type="Promotional"><i class="fa-solid fa-chart-simple"></i> Promotional</button>
+            <button class="post-type-button" data-type="Educational"><i class="fa-solid fa-graduation-cap"></i> Educational</button> <!-- Changed icon -->
+            <button class="post-type-button" data-type="Awareness"><i class="fa-solid fa-bullhorn"></i> Awareness</button> <!-- Changed icon -->
+        </div>
+        <hr>
+
+        <!-- Language Selection -->
+        <div class="row g-3 align-items-center">
+             <div class="col-md-6">
+                 <h5 class="mb-0"><span class="step-number">2</span> Select Languages</h5>
+             </div>
+            <div class="col-md-3">
+                <label for="inputLanguage" class="form-label">Input Language</label>
+                <select class="form-select" id="inputLanguage">
+                    <option selected value="English">English</option>
+                    <option value="Hindi">Hindi</option>
+                    <option value="Spanish">Spanish</option>
+                    <option value="French">French</option>
+                    <option value="Bengali">Bengali</option>
+                    <option value="German">German</option>
+                    <option value="Portuguese">Portuguese</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="outputLanguage" class="form-label">Output Language</label>
+                <select class="form-select" id="outputLanguage">
+                     <option selected value="English">English</option> <!-- Added English as output option -->
+                    <option value="Hindi">Hindi</option>
+                    <option value="Spanish">Spanish</option>
+                    <option value="French">French</option>
+                    <option value="Bengali">Bengali</option>
+                    <option value="German">German</option>
+                    <option value="Portuguese">Portuguese</option>
+                </select>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- Step 3: Upload Image -->
+        <div>
+            <h5 style="margin-bottom: 15px;"><span class="step-number">3</span> Upload Image <small class="text-muted">(Optional - Images are shown in popup, but image content is *not* sent to the AI)</small></h5>
+            <div class="mb-3">
+                <label for="formFile" class="form-label">Choose one or more images:</label>
+                <input class="form-control" type="file" id="formFile" accept="image/*" multiple> <!-- Added 'multiple' attribute -->
+                <small class="text-muted">Accepted formats: JPG, PNG, GIF. You can select multiple files.</small>
+                 <div id="imageFileName" class="text-success mt-1"></div> <!-- To show selected file count/names -->
+            </div>
+        </div>
+
+         <!-- Step 4: Provide more context -->
+        <div>
+            <h5 style="margin-bottom: 15px;"><span class="step-number">4</span> Provide Details / Keywords <small class="text-muted">(Required)</small></h5>
+            <div class="mb-3">
+                <textarea class="form-control" id="contextInput" rows="4" placeholder="e.g., Describe your idea, product benefits, educational topic, awareness message, or keywords you want to include..."></textarea>
+                <div class="invalid-feedback">
+                  Please provide some details or keywords.
+                </div>
+            </div>
+        </div>
+
+
+        <hr>
+        <!-- Generate Post Button -->
+        <div class="text-end mt-3">
+            <button id="generatePostBtn" class="btn btn-primary" style="background-color: #28a745; border-color: #28a745;">
+                <i class="fa-solid fa-bolt"></i> GENERATE POST
+                 <span id="loadingSpinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Bootstrap Modal Structure -->
+    <div class="modal fade" id="postModal" tabindex="-1" aria-labelledby="postModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="postModalLabel">Generated Social Media Content</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Facebook Post Block -->
+                    <div id="facebookPostContent" class="generated-content-block">
+                        <h6><i class="fab fa-facebook"></i> Facebook Post</h6>
+                        <p id="facebookText">Loading...</p> <!- - TEXT CONTENT NOW FIRST - ->
+                        <!-- Container for multiple images -->
+                        <div class="post-images-preview">
+                            <!-- Images will be dynamically added here -->
+                        </div>
+                        <div class="share-buttons"> <!- - Share Buttons Container - ->
+                            <button class="btn btn-sm btn-primary share-button share-facebook-btn" title="Share to Facebook"><i class="fab fa-facebook"></i> Share</button>
+                        </div>
+                    </div>
+                    <hr> <!-- Optional separator -->
+
+                    <!-- X (Twitter) Post Block -->
+                    <div id="xPostContent" class="generated-content-block">
+                        <h6><i class="fab fa-twitter"></i> X (Twitter) Post</h6>
+                        <p id="xText">Loading... (X posts are concise)</p> <!- - TEXT CONTENT NOW FIRST - ->
+                        <!-- Container for multiple images -->
+                        <div class="post-images-preview">
+                             <!-- Images will be dynamically added here -->
+                        </div>
+                        <div class="share-buttons"> <!- - Share Buttons Container - ->
+                            <button class="btn btn-sm btn-primary share-button share-x-btn" title="Share to X (Twitter)"><i class="fab fa-twitter"></i> Share</button>
+                        </div>
+                    </div>
+                     <hr> <!-- Optional separator -->
+
+                    <!-- Instagram Post Block -->
+                    <div id="instagramPostContent" class="generated-content-block">
+                        <h6><i class="fab fa-instagram"></i> Instagram Post</h6>
+                         <p id="instagramText">Loading... (Instagram captions can use line breaks and hashtags)</p> <!- - TEXT CONTENT NOW FIRST - ->
+                         <!-- Container for multiple images -->
+                         <div class="post-images-preview">
+                              <!-- Images will be dynamically added here -->
+                         </div>
+                         <div class="share-buttons"> <!- - Share Buttons Container - ->
+                            <button class="btn btn-sm btn-primary share-button copy-insta-btn" title="Copy Instagram Caption"><i class="fa-regular fa-clipboard"></i> Copy Caption</button>
+                            <button class="btn btn-sm btn-secondary share-button open-insta-btn" title="Open Instagram"><i class="fab fa-instagram"></i> Open Instagram</button>
+                        </div>
+                    </div>
+
+                     <div id="modalError" class="alert alert-danger mt-3 d-none" role="alert"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // !!! WARNING: Hardcoding API keys in frontend code is a security risk. !!!
+        // !!! Use a backend server for production applications.               !!!
+        const GEMINI_API_KEY = "AIzaSyBNPrThRfqzW_lJpFd1F9lyepRM7q1SghU"; // Replace with your actual key
+        const MODEL_ID = "gemini-2.0-flash"; // Or another suitable model
+        const GENERATE_CONTENT_API = "generateContent";
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}:${GENERATE_CONTENT_API}?key=${GEMINI_API_KEY}`;
+
+
+        // --- Get references to HTML elements ---
+        const postTypeButtons = document.querySelectorAll('.post-type-button');
+        const inputLanguageSelect = document.getElementById('inputLanguage');
+        const outputLanguageSelect = document.getElementById('outputLanguage');
+        const fileInput = document.getElementById('formFile');
+        const contextInput = document.getElementById('contextInput');
+        const generatePostBtn = document.getElementById('generatePostBtn');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const imageFileNameDiv = document.getElementById('imageFileName');
+
+        // --- References to modal elements ---
+        const postModalElement = document.getElementById('postModal');
+        const postModal = new bootstrap.Modal(postModalElement);
+        const facebookText = document.getElementById('facebookText');
+        const xText = document.getElementById('xText');
+        const instagramText = document.getElementById('instagramText');
+        const modalErrorDiv = document.getElementById('modalError');
+
+        // Get references to image *container* elements inside the modal
+        const modalFacebookImagesContainer = document.querySelector('#facebookPostContent .post-images-preview');
+        const modalXImagesContainer = document.querySelector('#xPostContent .post-images-preview');
+        const modalInstagramImagesContainer = document.querySelector('#instagramPostContent .post-images-preview');
+        const modalImageContainers = [modalFacebookImagesContainer, modalXImagesContainer, modalInstagramImagesContainer]; // Array for easy iteration
+
+        // Get references to share buttons
+        const shareFacebookBtn = document.querySelector('.share-facebook-btn');
+        const shareXBtn = document.querySelector('.share-x-btn');
+        const copyInstaBtn = document.querySelector('.copy-insta-btn');
+        const openInstaBtn = document.querySelector('.open-insta-btn');
+
+
+        // --- Array to store the uploaded image data URLs ---
+        let uploadedImageDataUrls = [];
+
+
+        // --- Event Listeners ---
+
+        // Handle active state of post type buttons
+        postTypeButtons.forEach(button => {
+            button.addEventListener('click', function () {
+                postTypeButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Handle file input change to read multiple images and store their data URLs
+        fileInput.addEventListener('change', function() {
+            uploadedImageDataUrls = []; // Clear previous selection
+            imageFileNameDiv.textContent = ''; // Clear previous text
+
+            const files = this.files;
+
+            if (files.length > 0) {
+                 let validFilesCount = 0;
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    if (file.type.startsWith('image/')) {
+                         validFilesCount++;
+                        const reader = new FileReader();
+
+                        // Use a closure to capture the file for logging
+                        reader.onload = (function(theFile) {
+                            return function(e) {
+                                uploadedImageDataUrls.push(e.target.result); // Store the Data URL
+                                console.log(`Read file: ${theFile.name}`);
+                                // Update text after each file is read (or wait till all are done)
+                                imageFileNameDiv.textContent = `Selected ${uploadedImageDataUrls.length} image(s)`;
+                            };
+                        })(file);
+
+
+                        reader.onerror = (function(theFile) {
+                            return function(e) {
+                                console.error(`FileReader error for ${theFile.name}:`, e);
+                                imageFileNameDiv.textContent = `Error reading file(s).`; // Indicate there was an error
+                                // Don't push error result, just skip this file
+                            }
+                         })(file);
+
+
+                        reader.readAsDataURL(file); // Read the file as a Data URL
+
+                    } else {
+                        console.warn(`Skipped non-image file: ${file.name}`);
+                    }
+                }
+                 if (validFilesCount === 0 && files.length > 0) {
+                     imageFileNameDiv.textContent = 'No valid image files selected.';
+                 } else if (validFilesCount > 0) {
+                      // Initial text, will be updated as files read
+                      imageFileNameDiv.textContent = `Processing ${validFilesCount} image(s)...`;
+                 }
+
+
+            } else {
+                imageFileNameDiv.textContent = ''; // No files selected
+                uploadedImageDataUrls = [];
+            }
+        });
+
+        // Clear images and text when modal is hidden
+        postModalElement.addEventListener('hidden.bs.modal', function () {
+           modalImageContainers.forEach(container => {
+               container.innerHTML = ''; // Clear all child elements (images)
+           });
+            facebookText.textContent = '';
+            xText.textContent = '';
+            instagramText.textContent = '';
+             modalErrorDiv.classList.add('d-none'); // Hide error message
+        });
+
+        // --- Function to style hashtags in text ---
+        function styleHashtags(text) {
+            // Regular expression to find hashtags (starting with #, followed by word characters)
+            const hashtagRegex = /#(\w+)/g; // Matches # followed by one or more word characters
+            return text.replace(hashtagRegex, '<span class="hashtag">#$1</span>');
+        }
+
+
+        // Handle Generate Post Button Click
+        generatePostBtn.addEventListener('click', async function () {
+            // Basic Validation
+            if (contextInput.value.trim() === '') {
+                contextInput.classList.add('is-invalid');
+                alert('Please provide some details or keywords.'); // Or use a Bootstrap alert
+                return;
+            } else {
+                 contextInput.classList.remove('is-invalid');
+            }
+
+
+            // --- Collect Inputs ---
+            const selectedPostTypeButton = document.querySelector('.post-type-button.active');
+            const postType = selectedPostTypeButton ? selectedPostTypeButton.dataset.type : 'General';
+            const inputLanguage = inputLanguageSelect.value;
+            const outputLanguage = outputLanguageSelect.value;
+            const userContext = contextInput.value.trim();
+            const imagesSelectedCount = uploadedImageDataUrls.length;
+
+
+            // --- Construct Prompt ---
+            let prompt = `Generate social media content based on the following requirements:
+            - Post Type: ${postType}
+            - Input Context Language: ${inputLanguage}
+            - Output Language: ${outputLanguage}
+            - User Context/Details: "${userContext}"`;
+
+            if (imagesSelectedCount > 0) {
+                prompt += `\n- Note: The user has uploaded ${imagesSelectedCount} image(s). Consider how the post text could complement a visual element, or just be aware images will accompany the post. Do NOT describe the specific content of the uploaded images, and do NOT include image data in the response.`;
+            }
+
+            prompt += `\n\nPlease provide content specifically tailored for each platform below. Aim for the general conventions of each platform regarding length and style. Use clear headings for each section exactly as follows, followed by the generated text.
+            Also follow 5W1H approach which is what, who, when, where, why and how? in the post by analyzing the images and given information.
+            Dont mention 5W1H approach which is what, who, when, where, why and how? in the post directly.  :
+
+            ### Facebook Post ###
+            [Generate Facebook content here. It can be a moderate length, suitable for a typical feed post. Include relevant hashtags.]
+
+            ### X (Twitter) Post ###
+            [Generate X content here. Be concise, strictly adhere to a character limit appropriate for X (~280 chars including hashtags is a good target). Include relevant hashtags.]
+
+            ### Instagram Post ###
+            [Generate Instagram caption here. It should be engaging and can use line breaks for readability, but aim for a concise to moderate length compared to Facebook. Include relevant hashtags.]
+
+            Ensure the language of the generated content is strictly in ${outputLanguage}.`;
+
+            console.log("Generated Prompt:", prompt);
+
+            // --- Prepare API Request Body ---
+             const requestBody = {
+                "contents": [
+                    {
+                        "role": "user",
+                        "parts": [
+                            { "text": prompt }
+                        ]
+                    }
+                ],
+                "generationConfig": {
+                    "responseMimeType": "text/plain"
+                }
+            };
+
+            // --- Show Loading State ---
+            generatePostBtn.disabled = true;
+            loadingSpinner.style.display = 'inline-block';
+
+             // Clear previous content and images in modal
+             modalImageContainers.forEach(container => {
+               container.innerHTML = '';
+            });
+            facebookText.textContent = 'Generating...';
+            xText.textContent = 'Generating... (X posts are concise)';
+            instagramText.textContent = 'Generating... (Instagram captions can use line breaks and hashtags)';
+            modalErrorDiv.classList.add('d-none');
+
+
+            // --- Make API Call ---
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody),
+                });
+
+                if (!response.ok) {
+                     let errorDetails = response.statusText;
+                     try {
+                          const errorData = await response.json();
+                          errorDetails = errorData.error.message || JSON.stringify(errorData);
+                     } catch (jsonError) {
+                          console.warn("API error response was not JSON:", await response.text());
+                     }
+                     console.error('API Error:', response.status, errorDetails);
+                     throw new Error(`API request failed with status ${response.status}: ${errorDetails}`);
+                }
+
+                const data = await response.json();
+                console.log("API Response:", data);
+
+                const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No content generated.';
+
+
+                // --- Parse Generated Text for Platforms ---
+                const facebookMatch = generatedText.match(/### Facebook Post ###\s*([\s\S]*?)(?=### X \(Twitter\) Post ###|$)/);
+                const xMatch = generatedText.match(/### X \(Twitter\) Post ###\s*([\s\S]*?)(?=### Instagram Post ###|$)/);
+                const instagramMatch = generatedText.match(/### Instagram Post ###\s*([\s\S]*?)$/);
+
+                const facebookContent = facebookMatch ? facebookMatch[1].trim() : '';
+                const xContent = xMatch ? xMatch[1].trim() : '';
+                const instagramContent = instagramMatch ? instagramMatch[1].trim() : '';
+
+
+                // --- Populate Modal Text (and style hashtags) ---
+                facebookText.innerHTML = styleHashtags(facebookContent) || 'No Facebook content generated or could not parse.'; // Use innerHTML and style
+                xText.innerHTML = styleHashtags(xContent) || 'No X content generated or could not parse.';       // Use innerHTML and style
+                instagramText.innerHTML = styleHashtags(instagramContent) || 'No Instagram content generated or could not parse.'; // Use innerHTML and style
+
+                 // Fallback if parsing fails but some text is returned
+                 if (!facebookMatch && !xMatch && !instagramMatch && generatedText.trim().length > 0) {
+                      console.warn("Could not parse AI response into platform sections. Displaying raw text in Facebook section.");
+                     facebookText.innerHTML = "Warning: Could not parse response into sections.\n\nRaw AI Response:\n" + generatedText.trim(); // Use innerHTML for raw text too (though no styles will apply)
+                     xText.textContent = 'N/A';
+                     instagramText.textContent = 'N/A';
+                 }
+
+
+                // --- Populate Modal Images ---
+                if (uploadedImageDataUrls.length > 0) {
+                    modalImageContainers.forEach(container => {
+                        // Clear previous images before adding new ones (important if modal was already open)
+                        container.innerHTML = '';
+                        uploadedImageDataUrls.forEach(dataUrl => {
+                            const imgElement = document.createElement('img');
+                            imgElement.src = dataUrl;
+                            imgElement.alt = "Uploaded image preview";
+                            imgElement.classList.add('img-fluid', 'post-image-preview'); // Add styling classes
+                            container.appendChild(imgElement);
+                        });
+                    });
+                } else {
+                     // Ensure containers are empty if no images uploaded
+                      modalImageContainers.forEach(container => {
+                           container.innerHTML = '';
+                        });
+                }
+
+
+                // --- Show Modal ---
+                postModal.show();
+
+            } catch (error) {
+                console.error("Error generating post:", error);
+                modalErrorDiv.textContent = `Error: ${error.message || 'An unexpected error occurred.'}`;
+                modalErrorDiv.classList.remove('d-none');
+                facebookText.textContent = '';
+                xText.textContent = '';
+                instagramText.textContent = '';
+                 modalImageContainers.forEach(container => {
+                     container.innerHTML = ''; // Clear images on error too
+                 });
+
+                 postModal.show();
+            } finally {
+                // --- Hide Loading State ---
+                generatePostBtn.disabled = false;
+                loadingSpinner.style.display = 'none';
+            }
+        });
+
+        // --- Share Button Event Listeners ---
+
+        shareFacebookBtn.addEventListener('click', function() {
+            const text = facebookText.textContent;
+            const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}"e=${encodeURIComponent(text)}`; // Using current page URL as example 'u'
+            window.open(shareUrl, '_blank');
+        });
+
+        shareXBtn.addEventListener('click', function() {
+            const text = xText.textContent;
+            const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+            window.open(shareUrl, '_blank');
+        });
+
+        copyInstaBtn.addEventListener('click', function() {
+            const text = instagramText.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                copyInstaBtn.textContent = 'Copied!'; // Provide visual feedback
+                setTimeout(() => { // Revert button text after a short delay
+                    copyInstaBtn.textContent = '<i class="fa-regular fa-clipboard"></i> Copy Caption';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                alert('Failed to copy caption. Please copy manually.'); // Fallback for clipboard API failure
+            });
+        });
+
+        openInstaBtn.addEventListener('click', function() {
+            window.open('https://www.instagram.com/', '_blank');
+        });
+
+
+    </script>
+
+</body>
+
+</html>
