@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Post Creator</title>
+    <title>AwaGen - Awareness Generation</title> <!-- Updated title tag -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
         integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
@@ -15,8 +15,37 @@
             background-color: #f8f9fa;
         }
 
+        /* Added style for the main header */
+        header {
+            background-color: #e9ecef; /* Light grey background */
+            padding: 20px 0; /* Add padding top and bottom */
+            margin-bottom: 20px; /* Space below the header */
+            text-align: center; /* Center the text */
+            border-bottom: 1px solid #ced4da; /* Subtle bottom border */
+        }
+
+        header h1 {
+            margin: 0; /* Remove default margin */
+            color: #343a40; /* Dark text color */
+            /* Use flexbox to align items vertically in the heading */
+            display: flex;
+            align-items: center;
+            justify-content: center; /* Center text and image horizontally */
+            font-family: 'Montserrat', sans-serif; /* Apply the imported font */
+            font-weight: 600; /* Use the bold weight if you imported it */
+        }
+
+        /* Style for the Gemini logo image in the header */
+        header h1 img {
+            height: 1em; /* Make the image height roughly match the text height */
+            vertical-align: middle; /* Align vertically with the text */
+            margin-left: 10px; /* Add some space between the text and the logo */
+            /* Adjust height/margin as needed to look good */
+        }
+
+
         .container {
-            margin-top: 20px;
+            /* margin-top: 20px; Removed as header now adds space */
             background-color: #fff;
             padding: 30px;
             border-radius: 10px;
@@ -161,8 +190,24 @@
 
 <body>
 
+    <!-- --- NEW HEADER ELEMENT --- -->
+    <header>
+        <div class="container">
+            <h1>
+                AwaGen - Awareness Generation
+                <!-- --- Replaced icon with image --- -->
+                <img src="LOGO.png" alt="Gemini Logo">
+                <!-- --- End image replacement --- -->
+            </h1>
+        </div>
+    </header>
+    <!-- --- END NEW HEADER --- -->
+
+
     <div class="container">
-        <h1>What do you want to create today? <i class="fa-solid fa-wand-magic-sparkles"></i></h1>
+        <!-- Updated the h2 tag to also have the 'h4' class -->
+        <h2 class="mb-4 h4">Create Your Social Media Post</h2> <!-- Added h4 class here -->
+
         <hr>
 
         <!-- Step 1: Pick your choice of post -->
@@ -232,9 +277,9 @@
                         <i class="fas fa-microphone"></i>
                     </button>
                 </div>
-                 <!-- --- NEW NOTE ADDED HERE --- -->
-                 <small class="form-text text-muted">Share as many details as you can to help us craft a highly engaging social media post.</small>
-                 <!-- --- END NEW NOTE --- -->
+                 <!-- Note about providing details -->
+                <small class="form-text text-muted">Provide as much detail as possible to help the AI generate relevant content.</small>
+                 <!-- Validation feedback for context input -->
                 <div class="invalid-feedback">
                   Please provide some details or keywords.
                 </div>
@@ -399,7 +444,7 @@
                 console.log('Speech recognition started.');
                 speechRecognitionBtn.classList.add('recording');
                 speechStatus.textContent = 'Listening... Speak now.';
-                speechStatus.classList.remove('d-none', 'text-danger', 'text-success');
+                speechStatus.classList.remove('d-none', 'text-danger', 'text-success', 'text-warning'); // Remove other states
                 speechStatus.classList.add('text-muted'); // Use muted text for info
             };
 
@@ -420,16 +465,16 @@
 
                 // Append final transcript to the textarea
                 if (finalTranscript) {
-                    // Add a space if the textarea isn't empty
-                    if (contextInput.value.trim() !== '') {
+                    // Add a space if the textarea isn't empty and the new text doesn't start with a space
+                    if (contextInput.value.trim() !== '' && !finalTranscript.startsWith(' ')) {
                          contextInput.value += ' ';
                     }
                     contextInput.value += finalTranscript.trim();
+                    // Update status message
                     speechStatus.textContent = 'Speech recognized. Ready.';
-                    speechStatus.classList.remove('text-muted');
+                    speechStatus.classList.remove('text-muted', 'text-danger', 'text-warning'); // Remove other states
                     speechStatus.classList.add('text-success');
-                     // Automatically stop after a final result if continuous is false
-                     // The 'end' event will handle UI reset
+                     // The 'end' event will handle UI reset (including hiding status)
                 }
 
                  // Display interim results (optional, requires interimResults = true)
@@ -442,7 +487,7 @@
             recognition.onerror = function(event) {
                 console.error('Speech recognition error:', event.error);
                 speechStatus.textContent = `Error: ${event.error}`;
-                 speechStatus.classList.remove('d-muted', 'text-success');
+                 speechStatus.classList.remove('d-muted', 'text-success', 'text-warning'); // Remove other states
                  speechStatus.classList.add('text-danger');
 
                  // Handle common errors
@@ -461,18 +506,20 @@
             recognition.onend = function() {
                 console.log('Speech recognition ended.');
                 speechRecognitionBtn.classList.remove('recording');
-                 // If there wasn't a specific error message already set, reset status
-                 if (!speechStatus.textContent.startsWith('Error:')) {
+                 // If there wasn't a specific error message already set by onerror, reset status
+                 // and hide it after a delay. If onerror *did* set a message, keep it visible.
+                 if (!speechStatus.classList.contains('text-danger')) {
                      speechStatus.textContent = 'Ready for speech input.';
-                      speechStatus.classList.remove('text-muted', 'text-danger');
+                      speechStatus.classList.remove('text-muted', 'text-danger', 'text-warning'); // Remove other states
                       speechStatus.classList.add('text-success');
-                 }
-                 // Hide status after a few seconds unless it's an error
-                  if (!speechStatus.classList.contains('text-danger')) {
+                       // Hide status after a few seconds
                       setTimeout(() => {
                            speechStatus.classList.add('d-none');
+                           speechStatus.textContent = ''; // Clear text when hidden
                       }, 5000); // Hide after 5 seconds
-                  }
+                 } else {
+                     // Keep error message visible, don't hide after timeout
+                 }
             };
 
             // Set the language based on the input language select when starting
@@ -492,7 +539,9 @@
                          speechStatus.classList.remove('d-none', 'text-danger', 'text-success');
                          speechStatus.classList.add('text-warning'); // Use warning color
                     } else {
-                         speechStatus.classList.add('d-none'); // Hide status if language is mapped
+                          // Clear and hide status if language is mapped correctly before starting
+                         speechStatus.classList.add('d-none');
+                         speechStatus.textContent = '';
                     }
 
 
@@ -502,7 +551,7 @@
                     } catch (e) {
                        console.error("Error starting speech recognition:", e);
                        speechStatus.textContent = `Error starting speech input: ${e.message}`;
-                       speechStatus.classList.remove('d-none', 'text-muted', 'text-success');
+                       speechStatus.classList.remove('d-none', 'text-muted', 'text-success', 'text-warning');
                        speechStatus.classList.add('text-danger');
                        speechRecognitionBtn.classList.remove('recording');
                     }
@@ -618,7 +667,7 @@
             // --- Collect Inputs ---
             const selectedPostTypeButton = document.querySelector('.post-type-button.active');
             const postType = selectedPostTypeButton ? selectedPostTypeButton.dataset.type : 'General';
-            const inputLanguage = inputLanguageSelect.value;
+            const inputLanguage = inputLanguageSelect.value; // Keep input language for potential future use by backend
             const outputLanguage = outputLanguageSelect.value;
             const userContext = contextInput.value.trim();
             const imagesSelectedCount = uploadedImageDataUrls.length; // Tell backend *how many* images were selected
@@ -628,7 +677,7 @@
             // Send the collected data to your backend API
              const requestBody = {
                 postType: postType,
-                inputLanguage: inputLanguage,
+                inputLanguage: inputLanguage, // Send input language as well
                 outputLanguage: outputLanguage,
                 userContext: userContext,
                 imagesSelectedCount: imagesSelectedCount // Let the backend know the count
@@ -638,7 +687,9 @@
 
             // --- Show Loading State ---
             generatePostBtn.disabled = true;
-            speechRecognitionBtn.disabled = true; // Disable speech input while generating
+             if (SpeechRecognition) { // Only disable if speech is supported
+                 speechRecognitionBtn.disabled = true; // Disable speech input while generating
+             }
             loadingSpinner.style.display = 'inline-block';
 
              // Clear previous content and images in modal
