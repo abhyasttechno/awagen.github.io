@@ -131,6 +131,31 @@
             font-weight: bold;           /* Make hashtags bold */
             color: darkblue;          /* Dark bluish color */
         }
+
+         /* Style for the microphone button when active (recording) */
+         #speechRecognitionBtn.recording {
+            color: white; /* White icon */
+            background-color: #dc3545; /* Red background */
+            border-color: #dc3545; /* Red border */
+            animation: pulse 1s infinite; /* Add a pulse animation */
+         }
+
+         @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); /* Red color with alpha */
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); /* Red color with alpha, expands */
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); /* Red color with alpha, disappears */
+            }
+         }
+
+        #speechRecognitionBtn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 
@@ -199,10 +224,22 @@
         <div>
             <h5 style="margin-bottom: 15px;"><span class="step-number">4</span> Provide Details / Keywords <small class="text-muted">(Required)</small></h5>
             <div class="mb-3">
-                <textarea class="form-control" id="contextInput" rows="4" placeholder="e.g., Describe your idea, product benefits, educational topic, awareness message, or keywords you want to include..."></textarea>
+                <!-- Use d-flex to put textarea and button side-by-side -->
+                <div class="d-flex align-items-start">
+                    <textarea class="form-control me-2" id="contextInput" rows="4" placeholder="e.g., Describe your idea, product benefits, educational topic, awareness message, or keywords you want to include..."></textarea>
+                     <!-- Microphone Button -->
+                    <button id="speechRecognitionBtn" class="btn btn-secondary" type="button" title="Start Speech Input">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                </div>
+                 <!-- --- NEW NOTE ADDED HERE --- -->
+                 <small class="form-text text-muted">Share as many details as you can to help us craft a highly engaging social media post.</small>
+                 <!-- --- END NEW NOTE --- -->
                 <div class="invalid-feedback">
                   Please provide some details or keywords.
                 </div>
+                 <!-- Status message area for speech recognition -->
+                 <small id="speechStatus" class="form-text text-muted d-none"></small>
             </div>
         </div>
 
@@ -295,6 +332,10 @@
         const generatePostBtn = document.getElementById('generatePostBtn');
         const loadingSpinner = document.getElementById('loadingSpinner');
         const imageFileNameDiv = document.getElementById('imageFileName');
+        // New: Microphone button and status area
+        const speechRecognitionBtn = document.getElementById('speechRecognitionBtn');
+        const speechStatus = document.getElementById('speechStatus');
+
 
         // --- References to modal elements ---
         const postModalElement = document.getElementById('postModal');
@@ -319,6 +360,155 @@
 
         // --- Array to store the uploaded image data URLs ---
         let uploadedImageDataUrls = [];
+
+        // --- Speech Recognition Setup ---
+        // Check if the browser supports the Web Speech API
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null; // Declare recognition variable
+
+        // Language mapping for Speech Recognition (adjust based on actual support)
+        const speechLangMap = {
+            'English': 'en-US',
+            'Hindi': 'hi-IN', // Common tag for Hindi
+            'Spanish': 'es-ES', // Common tag for Spanish (Spain)
+            'French': 'fr-FR', // Common tag for French (France)
+            'Bengali': 'bn-BD', // Common tag for Bengali (Bangladesh) - bn-IN for India
+            'German': 'de-DE', // Common tag for German (Germany)
+            'Portuguese': 'pt-PT' // Common tag for Portuguese (Portugal) - pt-BR for Brazil
+            // Add more as needed/supported by the browser
+        };
+
+
+        if (!SpeechRecognition) {
+            // Browser does not support Speech Recognition
+            speechRecognitionBtn.disabled = true;
+            speechRecognitionBtn.title = "Speech input not supported by your browser.";
+            console.warn("Web Speech API not supported in this browser.");
+            speechStatus.textContent = "Speech input not supported by your browser.";
+            speechStatus.classList.remove('d-none');
+            speechStatus.classList.add('text-danger');
+        } else {
+             // Browser supports Speech Recognition, initialize it
+            recognition = new SpeechRecognition();
+            // recognition.continuous = true; // Set to true if you want continuous recording until stopped
+            recognition.continuous = false; // Set to false to stop after a pause
+            recognition.interimResults = false; // Set to true to see results as you speak
+
+            // Event listeners for Speech Recognition
+            recognition.onstart = function() {
+                console.log('Speech recognition started.');
+                speechRecognitionBtn.classList.add('recording');
+                speechStatus.textContent = 'Listening... Speak now.';
+                speechStatus.classList.remove('d-none', 'text-danger', 'text-success');
+                speechStatus.classList.add('text-muted'); // Use muted text for info
+            };
+
+            recognition.onresult = function(event) {
+                console.log('Speech recognition result:', event);
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                // Loop through results to get the transcript
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+
+                // Append final transcript to the textarea
+                if (finalTranscript) {
+                    // Add a space if the textarea isn't empty
+                    if (contextInput.value.trim() !== '') {
+                         contextInput.value += ' ';
+                    }
+                    contextInput.value += finalTranscript.trim();
+                    speechStatus.textContent = 'Speech recognized. Ready.';
+                    speechStatus.classList.remove('text-muted');
+                    speechStatus.classList.add('text-success');
+                     // Automatically stop after a final result if continuous is false
+                     // The 'end' event will handle UI reset
+                }
+
+                 // Display interim results (optional, requires interimResults = true)
+                 // if (interimTranscript) {
+                 //    // You could display this somewhere, maybe next to the button
+                 //    speechStatus.textContent = 'Listening: ' + interimTranscript + '...';
+                 // }
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+                speechStatus.textContent = `Error: ${event.error}`;
+                 speechStatus.classList.remove('d-muted', 'text-success');
+                 speechStatus.classList.add('text-danger');
+
+                 // Handle common errors
+                 if (event.error === 'not-allowed') {
+                      speechStatus.textContent = 'Microphone access denied. Please allow microphone access in your browser settings.';
+                      speechRecognitionBtn.disabled = true; // Disable if permission permanently denied
+                 } else if (event.error === 'no-speech') {
+                       speechStatus.textContent = 'No speech detected. Please try again.';
+                 } else if (event.error === 'audio-capture') {
+                       speechStatus.textContent = 'Microphone not found or busy.';
+                 }
+
+                 // The 'end' event will be called after onerror, which resets the button
+            };
+
+            recognition.onend = function() {
+                console.log('Speech recognition ended.');
+                speechRecognitionBtn.classList.remove('recording');
+                 // If there wasn't a specific error message already set, reset status
+                 if (!speechStatus.textContent.startsWith('Error:')) {
+                     speechStatus.textContent = 'Ready for speech input.';
+                      speechStatus.classList.remove('text-muted', 'text-danger');
+                      speechStatus.classList.add('text-success');
+                 }
+                 // Hide status after a few seconds unless it's an error
+                  if (!speechStatus.classList.contains('text-danger')) {
+                      setTimeout(() => {
+                           speechStatus.classList.add('d-none');
+                      }, 5000); // Hide after 5 seconds
+                  }
+            };
+
+            // Set the language based on the input language select when starting
+            speechRecognitionBtn.addEventListener('click', function() {
+                 if (speechRecognitionBtn.classList.contains('recording')) {
+                     // If currently recording, stop it
+                     recognition.stop();
+                 } else {
+                    // If not recording, start it
+                    const selectedLanguage = inputLanguageSelect.value;
+                    const langCode = speechLangMap[selectedLanguage] || 'en-US'; // Default to English if mapping not found
+
+                    // Check if the selected language is likely supported (basic check)
+                    if (!speechLangMap[selectedLanguage] && selectedLanguage !== 'English') {
+                         console.warn(`Speech recognition language mapping not found for "${selectedLanguage}". Using default: ${langCode}`);
+                         speechStatus.textContent = `Warning: Using default speech language (${langCode}).`;
+                         speechStatus.classList.remove('d-none', 'text-danger', 'text-success');
+                         speechStatus.classList.add('text-warning'); // Use warning color
+                    } else {
+                         speechStatus.classList.add('d-none'); // Hide status if language is mapped
+                    }
+
+
+                    recognition.lang = langCode;
+                    try {
+                       recognition.start();
+                    } catch (e) {
+                       console.error("Error starting speech recognition:", e);
+                       speechStatus.textContent = `Error starting speech input: ${e.message}`;
+                       speechStatus.classList.remove('d-none', 'text-muted', 'text-success');
+                       speechStatus.classList.add('text-danger');
+                       speechRecognitionBtn.classList.remove('recording');
+                    }
+                 }
+            });
+        }
 
 
         // --- Event Listeners ---
@@ -417,6 +607,13 @@
                  contextInput.classList.remove('is-invalid');
             }
 
+             // Stop any active speech recognition before sending
+             if (recognition && recognition.recognizing) {
+                  recognition.stop();
+             }
+             // Hide speech status message immediately
+             speechStatus.classList.add('d-none');
+
 
             // --- Collect Inputs ---
             const selectedPostTypeButton = document.querySelector('.post-type-button.active');
@@ -441,6 +638,7 @@
 
             // --- Show Loading State ---
             generatePostBtn.disabled = true;
+            speechRecognitionBtn.disabled = true; // Disable speech input while generating
             loadingSpinner.style.display = 'inline-block';
 
              // Clear previous content and images in modal
@@ -546,6 +744,9 @@
             } finally {
                 // --- Hide Loading State ---
                 generatePostBtn.disabled = false;
+                 if (SpeechRecognition) { // Only re-enable if feature is supported
+                     speechRecognitionBtn.disabled = false;
+                 }
                 loadingSpinner.style.display = 'none';
             }
         });
