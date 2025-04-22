@@ -282,13 +282,9 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // !!! WARNING: Hardcoding API keys in frontend code is a security risk. !!!
-        // !!! Use a backend server for production applications.               !!!
-        const GEMINI_API_KEY = "AIzaSyBNPrThRfqzW_lJpFd1F9lyepRM7q1SghU"; // Replace with your actual key
-        const MODEL_ID = "gemini-2.0-flash"; // Or another suitable model
-        const GENERATE_CONTENT_API = "generateContent";
-        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}:${GENERATE_CONTENT_API}?key=${GEMINI_API_KEY}`;
-
+        // --- Backend API URL ---
+        // This is the URL of your Heroku application's generate-post endpoint
+        const BACKEND_API_URL = 'https://awagen-app-9a7bfbdf05ff.herokuapp.com/generate-post';
 
         // --- Get references to HTML elements ---
         const postTypeButtons = document.querySelectorAll('.post-type-button');
@@ -405,6 +401,7 @@
         function styleHashtags(text) {
             // Regular expression to find hashtags (starting with #, followed by word characters)
             const hashtagRegex = /#(\w+)/g; // Matches # followed by one or more word characters
+            // Use <span class="hashtag">#$1</span> to wrap the hashtag for styling
             return text.replace(hashtagRegex, '<span class="hashtag">#$1</span>');
         }
 
@@ -427,51 +424,20 @@
             const inputLanguage = inputLanguageSelect.value;
             const outputLanguage = outputLanguageSelect.value;
             const userContext = contextInput.value.trim();
-            const imagesSelectedCount = uploadedImageDataUrls.length;
+            const imagesSelectedCount = uploadedImageDataUrls.length; // Tell backend *how many* images were selected
 
 
-            // --- Construct Prompt ---
-            let prompt = `Generate social media content based on the following requirements:
-            - Post Type: ${postType}
-            - Input Context Language: ${inputLanguage}
-            - Output Language: ${outputLanguage}
-            - User Context/Details: "${userContext}"`;
-
-            if (imagesSelectedCount > 0) {
-                prompt += `\n- Note: The user has uploaded ${imagesSelectedCount} image(s). Consider how the post text could complement a visual element, or just be aware images will accompany the post. Do NOT describe the specific content of the uploaded images, and do NOT include image data in the response.`;
-            }
-
-            prompt += `\n\nPlease provide content specifically tailored for each platform below. Aim for the general conventions of each platform regarding length and style. Use clear headings for each section exactly as follows, followed by the generated text.
-            Also follow 5W1H approach which is what, who, when, where, why and how? in the post by analyzing the images and given information.
-            Dont mention 5W1H approach which is what, who, when, where, why and how? in the post directly.  :
-
-            ### Facebook Post ###
-            [Generate Facebook content here. It can be a moderate length, suitable for a typical feed post. Include relevant hashtags.]
-
-            ### X (Twitter) Post ###
-            [Generate X content here. Be concise, strictly adhere to a character limit appropriate for X (~280 chars including hashtags is a good target). Include relevant hashtags.]
-
-            ### Instagram Post ###
-            [Generate Instagram caption here. It should be engaging and can use line breaks for readability, but aim for a concise to moderate length compared to Facebook. Include relevant hashtags.]
-
-            Ensure the language of the generated content is strictly in ${outputLanguage}.`;
-
-            console.log("Generated Prompt:", prompt);
-
-            // --- Prepare API Request Body ---
+            // --- Prepare Request Body for YOUR Backend ---
+            // Send the collected data to your backend API
              const requestBody = {
-                "contents": [
-                    {
-                        "role": "user",
-                        "parts": [
-                            { "text": prompt }
-                        ]
-                    }
-                ],
-                "generationConfig": {
-                    "responseMimeType": "text/plain"
-                }
+                postType: postType,
+                inputLanguage: inputLanguage,
+                outputLanguage: outputLanguage,
+                userContext: userContext,
+                imagesSelectedCount: imagesSelectedCount // Let the backend know the count
             };
+
+            console.log("Sending data to backend:", requestBody);
 
             // --- Show Loading State ---
             generatePostBtn.disabled = true;
@@ -487,59 +453,59 @@
             modalErrorDiv.classList.add('d-none');
 
 
-            // --- Make API Call ---
+            // --- Make API Call to YOUR Backend ---
             try {
-                const response = await fetch(API_URL, {
+                const response = await fetch(BACKEND_API_URL, { // <-- Call your backend URL
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(requestBody),
+                    body: JSON.stringify(requestBody), // <-- Send your request body
                 });
 
+                // Check for non-2xx status codes from your backend
                 if (!response.ok) {
                      let errorDetails = response.statusText;
+                     let errorMessage = `Backend API request failed with status ${response.status}: ${errorDetails}`;
                      try {
                           const errorData = await response.json();
-                          errorDetails = errorData.error.message || JSON.stringify(errorData);
+                          // If backend sends a JSON error response, use its message
+                          if (errorData && errorData.error) {
+                              errorMessage = `Backend Error: ${errorData.error}`;
+                          } else {
+                              // Otherwise, log the full JSON response for debugging
+                              console.warn("Backend API error response was JSON but didn't contain an 'error' key:", errorData);
+                              errorDetails = JSON.stringify(errorData); // Use the full JSON as detail
+                               errorMessage = `Backend API request failed with status ${response.status}. Details: ${errorDetails}`;
+                          }
                      } catch (jsonError) {
-                          console.warn("API error response was not JSON:", await response.text());
+                          // If backend response is not JSON, just use the status text
+                          console.warn("Backend API error response was not JSON:", await response.text());
                      }
-                     console.error('API Error:', response.status, errorDetails);
-                     throw new Error(`API request failed with status ${response.status}: ${errorDetails}`);
+                     console.error('Backend API Error:', response.status, errorMessage);
+                     throw new Error(errorMessage); // Throw error to be caught below
                 }
 
+                // Assuming successful response is JSON with facebook, x, instagram keys
                 const data = await response.json();
-                console.log("API Response:", data);
+                console.log("Backend API Response Data:", data);
 
-                const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No content generated.';
-
-
-                // --- Parse Generated Text for Platforms ---
-                const facebookMatch = generatedText.match(/### Facebook Post ###\s*([\s\S]*?)(?=### X \(Twitter\) Post ###|$)/);
-                const xMatch = generatedText.match(/### X \(Twitter\) Post ###\s*([\s\S]*?)(?=### Instagram Post ###|$)/);
-                const instagramMatch = generatedText.match(/### Instagram Post ###\s*([\s\S]*?)$/);
-
-                const facebookContent = facebookMatch ? facebookMatch[1].trim() : '';
-                const xContent = xMatch ? xMatch[1].trim() : '';
-                const instagramContent = instagramMatch ? instagramMatch[1].trim() : '';
+                // --- Extract Content from Backend Response ---
+                // The backend is expected to return JSON like:
+                // { "facebook": "...", "x": "...", "instagram": "..." }
+                const facebookContent = data.facebook || 'No Facebook content received.';
+                const xContent = data.x || 'No X content received.';
+                const instagramContent = data.instagram || 'No Instagram content received.';
 
 
                 // --- Populate Modal Text (and style hashtags) ---
-                facebookText.innerHTML = styleHashtags(facebookContent) || 'No Facebook content generated or could not parse.'; // Use innerHTML and style
-                xText.innerHTML = styleHashtags(xContent) || 'No X content generated or could not parse.';       // Use innerHTML and style
-                instagramText.innerHTML = styleHashtags(instagramContent) || 'No Instagram content generated or could not parse.'; // Use innerHTML and style
-
-                 // Fallback if parsing fails but some text is returned
-                 if (!facebookMatch && !xMatch && !instagramMatch && generatedText.trim().length > 0) {
-                      console.warn("Could not parse AI response into platform sections. Displaying raw text in Facebook section.");
-                     facebookText.innerHTML = "Warning: Could not parse response into sections.\n\nRaw AI Response:\n" + generatedText.trim(); // Use innerHTML for raw text too (though no styles will apply)
-                     xText.textContent = 'N/A';
-                     instagramText.textContent = 'N/A';
-                 }
+                facebookText.innerHTML = styleHashtags(facebookContent); // Use innerHTML and style
+                xText.innerHTML = styleHashtags(xContent);       // Use innerHTML and style
+                instagramText.innerHTML = styleHashtags(instagramContent); // Use innerHTML and style
 
 
                 // --- Populate Modal Images ---
+                // This part remains the same, as image preview is handled client-side
                 if (uploadedImageDataUrls.length > 0) {
                     modalImageContainers.forEach(container => {
                         // Clear previous images before adding new ones (important if modal was already open)
@@ -564,17 +530,19 @@
                 postModal.show();
 
             } catch (error) {
-                console.error("Error generating post:", error);
-                modalErrorDiv.textContent = `Error: ${error.message || 'An unexpected error occurred.'}`;
+                console.error("Error generating post via backend:", error);
+                modalErrorDiv.textContent = `Error: ${error.message || 'An unexpected error occurred while contacting the backend.'}`;
                 modalErrorDiv.classList.remove('d-none');
-                facebookText.textContent = '';
-                xText.textContent = '';
-                instagramText.textContent = '';
+                // Clear texts and images on error
+                facebookText.textContent = 'Error loading content.';
+                xText.textContent = 'Error loading content.';
+                instagramText.textContent = 'Error loading content.';
                  modalImageContainers.forEach(container => {
-                     container.innerHTML = ''; // Clear images on error too
+                     container.innerHTML = '';
                  });
-
+                 // Still show the modal so the user sees the error message
                  postModal.show();
+
             } finally {
                 // --- Hide Loading State ---
                 generatePostBtn.disabled = false;
@@ -586,22 +554,26 @@
 
         shareFacebookBtn.addEventListener('click', function() {
             const text = facebookText.textContent;
-            const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}"e=${encodeURIComponent(text)}`; // Using current page URL as example 'u'
-            window.open(shareUrl, '_blank');
+            // Note: Sharing directly from a client-side JS app often requires the platform's SDK or specific share URLs.
+            // The 'u' parameter should ideally be the URL of the content being shared. Using window.location.href is a placeholder.
+            // You might need to adjust this for actual platform sharing.
+            const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}"e=${encodeURIComponent(text)}`;
+            window.open(shareUrl, '_blank', 'width=600,height=400'); // Added dimensions for popup
         });
 
         shareXBtn.addEventListener('click', function() {
             const text = xText.textContent;
+             // Note: Character limits apply to the tweet text.
             const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
-            window.open(shareUrl, '_blank');
+            window.open(shareUrl, '_blank', 'width=600,height=400'); // Added dimensions for popup
         });
 
         copyInstaBtn.addEventListener('click', function() {
-            const text = instagramText.textContent;
+            const text = instagramText.textContent; // Use textContent to get raw text for copying
             navigator.clipboard.writeText(text).then(() => {
-                copyInstaBtn.textContent = 'Copied!'; // Provide visual feedback
+                copyInstaBtn.innerHTML = '<i class="fa-regular fa-clipboard"></i> Copied!'; // Provide visual feedback using innerHTML to keep icon
                 setTimeout(() => { // Revert button text after a short delay
-                    copyInstaBtn.textContent = '<i class="fa-regular fa-clipboard"></i> Copy Caption';
+                    copyInstaBtn.innerHTML = '<i class="fa-regular fa-clipboard"></i> Copy Caption'; // Use innerHTML to keep icon
                 }, 2000);
             }).catch(err => {
                 console.error('Failed to copy text: ', err);
@@ -610,6 +582,9 @@
         });
 
         openInstaBtn.addEventListener('click', function() {
+             // Instagram doesn't have a direct web share API that accepts text like Facebook/Twitter.
+             // Usually, you'd guide the user to the app/web. Opening the main site is a common fallback.
+             // Mobile users might be redirected to the app if they have it installed.
             window.open('https://www.instagram.com/', '_blank');
         });
 
