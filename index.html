@@ -256,7 +256,7 @@
 
         <!-- Step 3: Upload Image -->
         <div>
-            <h5 style="margin-bottom: 15px;"><span class="step-number">3</span> Upload Image <small class="text-muted">(Optional - Images are shown in popup, but image content is *not* sent to the AI)</small></h5>
+            <h5 style="margin-bottom: 15px;"><span class="step-number">3</span> Upload Image <small class="text-muted">(Optional - Images will be analyzed by the AI)</small></h5> <!-- UPDATED TEXT -->
             <div class="mb-3">
                 <label for="formFile" class="form-label">Choose one or more images:</label>
                 <input class="form-control" type="file" id="formFile" accept="image/*" multiple> <!-- Added 'multiple' attribute -->
@@ -315,7 +315,7 @@
                         <p id="facebookText">Loading...</p> <!- - TEXT CONTENT NOW FIRST - ->
                         <!-- Container for multiple images -->
                         <div class="post-images-preview">
-                            <!-- Images will be dynamically added here -->
+                            <!-- Images will be dynamically added here (Previews from client-side read) -->
                         </div>
                         <div class="share-buttons"> <!- - Share Buttons Container - ->
                             <button class="btn btn-sm btn-primary share-button share-facebook-btn" title="Share to Facebook"><i class="fab fa-facebook"></i> Share</button>
@@ -329,7 +329,7 @@
                         <p id="xText">Loading... (X posts are concise)</p> <!- - TEXT CONTENT NOW FIRST - ->
                         <!-- Container for multiple images -->
                         <div class="post-images-preview">
-                             <!-- Images will be dynamically added here -->
+                             <!-- Images will be dynamically added here (Previews from client-side read) -->
                         </div>
                         <div class="share-buttons"> <!- - Share Buttons Container - ->
                             <button class="btn btn-sm btn-primary share-button share-x-btn" title="Share to X (Twitter)"><i class="fab fa-twitter"></i> Share</button>
@@ -343,7 +343,7 @@
                          <p id="instagramText">Loading... (Instagram captions can use line breaks and hashtags)</p> <!- - TEXT CONTENT NOW FIRST - ->
                          <!-- Container for multiple images -->
                          <div class="post-images-preview">
-                              <!-- Images will be dynamically added here -->
+                              <!-- Images will be dynamically added here (Previews from client-side read) -->
                          </div>
                          <div class="share-buttons"> <!- - Share Buttons Container - ->
                             <button class="btn btn-sm btn-primary share-button copy-insta-btn" title="Copy Instagram Caption"><i class="fa-regular fa-clipboard"></i> Copy Caption</button>
@@ -366,7 +366,7 @@
     <script>
         // --- Backend API URL ---
         // This is the URL of your Heroku application's generate-post endpoint
-        const BACKEND_API_URL = 'https://awagen-app-9a7bfbdf05ff.herokuapp.com/generate-post';
+        const BACKEND_API_URL = 'https://awagen-app-9a7bfbdf05ff.herokuapp.com/generate-post'; // Replace with your actual Heroku app URL
 
         // --- Get references to HTML elements ---
         const postTypeButtons = document.querySelectorAll('.post-type-button');
@@ -386,8 +386,8 @@
         const postModalElement = document.getElementById('postModal');
         const postModal = new bootstrap.Modal(postModalElement);
         const facebookText = document.getElementById('facebookText');
-        const xText = document.getElementById('xText');
-        const instagramText = document.getElementById('instagramText');
+        xText = document.getElementById('xText'); // Declare xText
+        instagramText = document.getElementById('instagramText'); // Declare instagramText
         const modalErrorDiv = document.getElementById('modalError');
 
         // Get references to image *container* elements inside the modal
@@ -403,7 +403,7 @@
         const openInstaBtn = document.querySelector('.open-insta-btn');
 
 
-        // --- Array to store the uploaded image data URLs ---
+        // --- Array to store the uploaded image data URLs (FOR PREVIEW ONLY) ---
         let uploadedImageDataUrls = [];
 
         // --- Speech Recognition Setup ---
@@ -570,12 +570,12 @@
             });
         });
 
-        // Handle file input change to read multiple images and store their data URLs
+        // --- MODIFIED: Handle file input change to read multiple images for PREVIEW ONLY ---
         fileInput.addEventListener('change', function() {
-            uploadedImageDataUrls = []; // Clear previous selection
+            uploadedImageDataUrls = []; // Clear previous selection for preview
             imageFileNameDiv.textContent = ''; // Clear previous text
 
-            const files = this.files;
+            const files = this.files; // Get the FileList object
 
             if (files.length > 0) {
                  let validFilesCount = 0;
@@ -583,29 +583,28 @@
                     const file = files[i];
                     if (file.type.startsWith('image/')) {
                          validFilesCount++;
+                        // Read file as Data URL for client-side PREVIEW in the modal *after* generation
                         const reader = new FileReader();
 
-                        // Use a closure to capture the file for logging
+                        // Use a closure to capture the file for logging and data URL storage
                         reader.onload = (function(theFile) {
                             return function(e) {
-                                uploadedImageDataUrls.push(e.target.result); // Store the Data URL
-                                console.log(`Read file: ${theFile.name}`);
+                                uploadedImageDataUrls.push(e.target.result); // Store the Data URL for modal preview
+                                console.log(`Read file for preview: ${theFile.name}`);
                                 // Update text after each file is read (or wait till all are done)
-                                imageFileNameDiv.textContent = `Selected ${uploadedImageDataUrls.length} image(s)`;
+                                imageFileNameDiv.textContent = `Selected ${uploadedImageDataUrls.length} image(s) for upload and preview.`;
                             };
                         })(file);
 
-
                         reader.onerror = (function(theFile) {
                             return function(e) {
-                                console.error(`FileReader error for ${theFile.name}:`, e);
-                                imageFileNameDiv.textContent = `Error reading file(s).`; // Indicate there was an error
-                                // Don't push error result, just skip this file
+                                console.error(`FileReader error for preview ${theFile.name}:`, e);
+                                // Indicate error but don't stop others
+                                imageFileNameDiv.textContent = `Error reading some file(s) for preview.`;
                             }
                          })(file);
 
-
-                        reader.readAsDataURL(file); // Read the file as a Data URL
+                        reader.readAsDataURL(file); // Read the file as a Data URL for preview
 
                     } else {
                         console.warn(`Skipped non-image file: ${file.name}`);
@@ -615,15 +614,17 @@
                      imageFileNameDiv.textContent = 'No valid image files selected.';
                  } else if (validFilesCount > 0) {
                       // Initial text, will be updated as files read
-                      imageFileNameDiv.textContent = `Processing ${validFilesCount} image(s)...`;
+                      imageFileNameDiv.textContent = `Processing ${validFilesCount} image(s) for upload and preview...`;
                  }
 
 
             } else {
                 imageFileNameDiv.textContent = ''; // No files selected
-                uploadedImageDataUrls = [];
+                uploadedImageDataUrls = []; // Clear preview array
             }
         });
+        // --- END MODIFIED: File input change listener ---
+
 
         // Clear images and text when modal is hidden
         postModalElement.addEventListener('hidden.bs.modal', function () {
@@ -634,6 +635,8 @@
             xText.textContent = '';
             instagramText.textContent = '';
              modalErrorDiv.classList.add('d-none'); // Hide error message
+            // Note: We don't clear the file input element itself or uploadedImageDataUrls here.
+            // The user might want to generate another post with the same images.
         });
 
         // --- Function to style hashtags in text ---
@@ -645,7 +648,7 @@
         }
 
 
-        // Handle Generate Post Button Click
+        // --- MODIFIED: Handle Generate Post Button Click ---
         generatePostBtn.addEventListener('click', async function () {
             // Basic Validation
             if (contextInput.value.trim() === '') {
@@ -667,23 +670,28 @@
             // --- Collect Inputs ---
             const selectedPostTypeButton = document.querySelector('.post-type-button.active');
             const postType = selectedPostTypeButton ? selectedPostTypeButton.dataset.type : 'General';
-            const inputLanguage = inputLanguageSelect.value; // Keep input language for potential future use by backend
+            const inputLanguage = inputLanguageSelect.value;
             const outputLanguage = outputLanguageSelect.value;
             const userContext = contextInput.value.trim();
-            const imagesSelectedCount = uploadedImageDataUrls.length; // Tell backend *how many* images were selected
 
+            // --- Prepare FormData for Backend ---
+            // FormData is used to send both text fields and files
+            const formData = new FormData();
+            formData.append('postType', postType);
+            formData.append('inputLanguage', inputLanguage); // Still send input language
+            formData.append('outputLanguage', outputLanguage);
+            formData.append('userContext', userContext);
 
-            // --- Prepare Request Body for YOUR Backend ---
-            // Send the collected data to your backend API
-             const requestBody = {
-                postType: postType,
-                inputLanguage: inputLanguage, // Send input language as well
-                outputLanguage: outputLanguage,
-                userContext: userContext,
-                imagesSelectedCount: imagesSelectedCount // Let the backend know the count
-            };
+            // Append each selected file to the FormData object
+            // The backend expects files under the name 'images'
+            const files = fileInput.files; // Get the FileList from the input
+            for (let i = 0; i < files.length; i++) {
+                // Append each file object directly
+                formData.append('images', files[i]);
+            }
 
-            console.log("Sending data to backend:", requestBody);
+            console.log(`Sending data to backend. Text fields: ${postType}, ${outputLanguage}, etc. Images count: ${files.length}`);
+
 
             // --- Show Loading State ---
             generatePostBtn.disabled = true;
@@ -706,10 +714,10 @@
             try {
                 const response = await fetch(BACKEND_API_URL, { // <-- Call your backend URL
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestBody), // <-- Send your request body
+                    // IMPORTANT: Do NOT set 'Content-Type': 'application/json' here.
+                    // When sending FormData, the browser sets the Content-Type to 'multipart/form-data'
+                    // automatically, including the necessary boundary.
+                    body: formData, // <-- Send the FormData object
                 });
 
                 // Check for non-2xx status codes from your backend
@@ -740,8 +748,6 @@
                 console.log("Backend API Response Data:", data);
 
                 // --- Extract Content from Backend Response ---
-                // The backend is expected to return JSON like:
-                // { "facebook": "...", "x": "...", "instagram": "..." }
                 const facebookContent = data.facebook || 'No Facebook content received.';
                 const xContent = data.x || 'No X content received.';
                 const instagramContent = data.instagram || 'No Instagram content received.';
@@ -753,8 +759,9 @@
                 instagramText.innerHTML = styleHashtags(instagramContent); // Use innerHTML and style
 
 
-                // --- Populate Modal Images ---
-                // This part remains the same, as image preview is handled client-side
+                // --- Populate Modal Images (using the PREVIEW data stored in uploadedImageDataUrls) ---
+                // This part displays the images that the user *selected*, which were read into Data URLs earlier.
+                // It does NOT use data from the backend API response for the images themselves.
                 if (uploadedImageDataUrls.length > 0) {
                     modalImageContainers.forEach(container => {
                         // Clear previous images before adding new ones (important if modal was already open)
@@ -782,14 +789,29 @@
                 console.error("Error generating post via backend:", error);
                 modalErrorDiv.textContent = `Error: ${error.message || 'An unexpected error occurred while contacting the backend.'}`;
                 modalErrorDiv.classList.remove('d-none');
-                // Clear texts and images on error
+                // Clear texts on error
                 facebookText.textContent = 'Error loading content.';
                 xText.textContent = 'Error loading content.';
                 instagramText.textContent = 'Error loading content.';
-                 modalImageContainers.forEach(container => {
-                     container.innerHTML = '';
-                 });
-                 // Still show the modal so the user sees the error message
+                 // Still attempt to display *preview* images if they were selected before the error
+                 if (uploadedImageDataUrls.length > 0) {
+                    modalImageContainers.forEach(container => {
+                        container.innerHTML = '';
+                        uploadedImageDataUrls.forEach(dataUrl => {
+                            const imgElement = document.createElement('img');
+                            imgElement.src = dataUrl;
+                            imgElement.alt = "Uploaded image preview";
+                            imgElement.classList.add('img-fluid', 'post-image-preview');
+                            container.appendChild(imgElement);
+                        });
+                    });
+                } else {
+                     modalImageContainers.forEach(container => {
+                      container.innerHTML = '';
+                   });
+            }
+
+                 // Still show the modal so the user sees the error message and potentially the previews
                  postModal.show();
 
             } finally {
@@ -801,21 +823,19 @@
                 loadingSpinner.style.display = 'none';
             }
         });
+        // --- END MODIFIED: Generate Post Button Click ---
+
 
         // --- Share Button Event Listeners ---
-
+        // ... (Keep share button logic as is) ...
         shareFacebookBtn.addEventListener('click', function() {
             const text = facebookText.textContent;
-            // Note: Sharing directly from a client-side JS app often requires the platform's SDK or specific share URLs.
-            // The 'u' parameter should ideally be the URL of the content being shared. Using window.location.href is a placeholder.
-            // You might need to adjust this for actual platform sharing.
-            const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}"e=${encodeURIComponent(text)}`;
+            const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}"e=${encodeURIComponent(text)}`; // Using 'quote' for text often works better than 'e' or appending to u
             window.open(shareUrl, '_blank', 'width=600,height=400'); // Added dimensions for popup
         });
 
         shareXBtn.addEventListener('click', function() {
             const text = xText.textContent;
-             // Note: Character limits apply to the tweet text.
             const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
             window.open(shareUrl, '_blank', 'width=600,height=400'); // Added dimensions for popup
         });
@@ -837,6 +857,7 @@
              // Instagram doesn't have a direct web share API that accepts text like Facebook/Twitter.
              // Usually, you'd guide the user to the app/web. Opening the main site is a common fallback.
              // Mobile users might be redirected to the app if they have it installed.
+             // Note: Image uploads are generally not possible via simple web intents for Instagram posts.
             window.open('https://www.instagram.com/', '_blank');
         });
 
